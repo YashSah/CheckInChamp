@@ -1,68 +1,89 @@
 
-
-import 'package:check_in_champ/models/attendance_model.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:check_in_champ/services/location_service.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../constants/constants.dart';
+import '../models/attendance_model.dart';
 import '../utils/utils.dart';
 
-class AttendanceService extends ChangeNotifier{
+class AttendanceService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
   AttendanceModel? attendanceModel;
 
-  String todayDate = DateFormat('dd MMMM yyyy').format(DateTime.now());
+  String todayDate = DateFormat("dd MMMM yyyy").format(DateTime.now());
 
   bool _isLoading = false;
 
   bool get isLoading => _isLoading;
 
-  set setIsLoading(bool value)
-  {
+  set setIsLoading(bool value) {
     _isLoading = value;
     notifyListeners();
   }
 
-  Future getTodayAttendance() async{
-    final List result = await _supabase.from(Constants.attendancetable).select().eq('employee_id', _supabase.auth.currentUser!.id).eq('date', todayDate);
-    if(result.isNotEmpty){
+  String _attendanceHistoryMonth = DateFormat('MMMM yyyyy').format(DateTime.now());
+
+  String get attendanceHistoryMonth => _attendanceHistoryMonth;
+
+  set attendanceHistoryMonth(String value){
+    _attendanceHistoryMonth = value;
+    notifyListeners();
+  }
+
+  Future getTodayAttendance() async {
+    final List result = await _supabase
+        .from(Constants.attendancetable)
+        .select()
+        .eq("employee_id", _supabase.auth.currentUser!.id)
+        .eq('date', todayDate);
+    if (result.isNotEmpty) {
       attendanceModel = AttendanceModel.fromJson(result.first);
     }
     notifyListeners();
   }
 
-  Future markAttendance(BuildContext context) async{
-    if(attendanceModel?.checkIn == null){
-      await _supabase.from(Constants.attendancetable).insert({
-        'employee_id': _supabase.auth.currentUser!.id,
-        'date': todayDate,
-      'check_In': DateFormat('HH:mm').format(DateTime.now()),
-      });
-    }
-    else if(attendanceModel?.checkOut == null){
-      await _supabase.from(Constants.attendancetable).update({
-        'check_out': DateFormat('HH:mm').format(DateTime.now()),
-      }).eq('employee_id', _supabase.auth.currentUser!.id).eq('date', todayDate);
+  Future markAttendance(BuildContext context) async {
+    Map? getLocation = await LocationService().initializeAndGetLocation(context);
+    if(getLocation != null){
+      if (attendanceModel?.checkIn == null) {
+        await _supabase.from(Constants.attendancetable).insert({
+          'employee_id': _supabase.auth.currentUser!.id,
+          'date': todayDate,
+          'check_in': DateFormat('HH:mm').format(DateTime.now()),
+          'check_in_location': getLocation,
+        });
+      } else if (attendanceModel?.checkOut == null) {
+        await _supabase
+            .from(Constants.attendancetable)
+            .update({
+          'check_out': DateFormat('HH:mm').format(DateTime.now()),
+          'check_out_location': getLocation,
+        })
+            .eq('employee_id', _supabase.auth.currentUser!.id)
+            .eq('date', todayDate);
+      } else {
+        Utils.showSnackBar("You have already checked out today !", context);
+      }
+      getTodayAttendance();
     }
     else{
-      Utils.showSnackBar('You have already checked out today !', context);
+      Utils.showSnackBar('Not able to get your Location', context, color: Colors.red);
+      getTodayAttendance();
     }
-    getTodayAttendance();
+
+  }
+
+  Future<List<AttendanceModel>> getAttendanceHistory() async {
+    final List data = await _supabase
+        .from(Constants.attendancetable)
+        .select()
+        .eq('employee_id', _supabase.auth.currentUser!.id)
+        .textSearch('date', "'$attendanceHistoryMonth'", config: 'english')
+        .order('created_at', ascending: false);
+
+    return data.map((attendance) => AttendanceModel.fromJson(attendance))
+        .toList();
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
