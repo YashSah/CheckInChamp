@@ -47,7 +47,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   height: 20,
                 ),
                 Text(
-                  "FAANG",
+                  "CheckInChamp",
                   style: TextStyle(
                       fontSize: 25,
                       color: Colors.white,
