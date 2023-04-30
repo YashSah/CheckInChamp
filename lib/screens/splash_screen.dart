@@ -12,7 +12,6 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
 
-    //authService.signOut();
 
     return authService.currentUser == null
         ? const LoginScreen() :

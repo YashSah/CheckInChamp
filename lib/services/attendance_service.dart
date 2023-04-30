@@ -1,5 +1,4 @@
 
-import 'package:check_in_champ/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../constants/constants.dart';
 import '../models/attendance_model.dart';
 import '../utils/utils.dart';
+import 'location_service.dart';
 
 class AttendanceService extends ChangeNotifier {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -23,11 +23,12 @@ class AttendanceService extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _attendanceHistoryMonth = DateFormat('MMMM yyyyy').format(DateTime.now());
+  String _attendanceHistoryMonth =
+  DateFormat('MMMM yyyy').format(DateTime.now());
 
   String get attendanceHistoryMonth => _attendanceHistoryMonth;
 
-  set attendanceHistoryMonth(String value){
+  set attendanceHistoryMonth(String value) {
     _attendanceHistoryMonth = value;
     notifyListeners();
   }
@@ -45,8 +46,11 @@ class AttendanceService extends ChangeNotifier {
   }
 
   Future markAttendance(BuildContext context) async {
-    Map? getLocation = await LocationService().initializeAndGetLocation(context);
-    if(getLocation != null){
+    Map? getLocation =
+    await LocationService().initializeAndGetLocation(context);
+    print("Location Data :");
+    print(getLocation);
+    if (getLocation != null) {
       if (attendanceModel?.checkIn == null) {
         await _supabase.from(Constants.attendancetable).insert({
           'employee_id': _supabase.auth.currentUser!.id,
@@ -67,12 +71,11 @@ class AttendanceService extends ChangeNotifier {
         Utils.showSnackBar("You have already checked out today !", context);
       }
       getTodayAttendance();
-    }
-    else{
-      Utils.showSnackBar('Not able to get your Location', context, color: Colors.red);
+    } else {
+      Utils.showSnackBar("Not able to get your Location", context,
+          color: Colors.red);
       getTodayAttendance();
     }
-
   }
 
   Future<List<AttendanceModel>> getAttendanceHistory() async {
@@ -83,7 +86,8 @@ class AttendanceService extends ChangeNotifier {
         .textSearch('date', "'$attendanceHistoryMonth'", config: 'english')
         .order('created_at', ascending: false);
 
-    return data.map((attendance) => AttendanceModel.fromJson(attendance))
+    return data
+        .map((attendance) => AttendanceModel.fromJson(attendance))
         .toList();
   }
 }
